@@ -1,0 +1,16 @@
+[Unit]
+Description=Family Todo List (Flet web)
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/opt/home-todo-list
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=/opt/home-todo-list/.env
+ExecStart=/opt/home-todo-list/.venv/bin/flet run app.py --web --host 0.0.0.0 --port 8000
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

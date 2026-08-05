@@ -2,6 +2,7 @@ import sqlite3
 from datetime import date, datetime
 from typing import List, Optional
 
+from auth import verify_password
 from models import SCOPE_PERSONAL, Task, User
 from storage import Storage
 
@@ -46,13 +47,18 @@ class SQLiteStorage(Storage):
         with self._connect() as conn:
             conn.executescript(_SCHEMA)
 
-    # ---------------- Пользователи ----------------
     def get_user_by_login(self, login: str) -> Optional[User]:
         with self._connect() as conn:
             row = conn.execute(
                 "SELECT * FROM users WHERE login = ?", (login,)
             ).fetchone()
         return self._row_to_user(row) if row else None
+
+    def authenticate(self, login: str, password: str) -> Optional[User]:
+        user = self.get_user_by_login(login)
+        if user is None or not verify_password(password, user.password_hash):
+            return None
+        return user
 
     def create_user(self, login: str, name: str, password_hash: str) -> User:
         with self._connect() as conn:
@@ -68,7 +74,6 @@ class SQLiteStorage(Storage):
             rows = conn.execute("SELECT * FROM users ORDER BY name").fetchall()
         return [self._row_to_user(r) for r in rows]
 
-    # ---------------- Задачи ----------------
     def list_tasks(self, scope: str, user_id: int) -> List[Task]:
         with self._connect() as conn:
             if scope == SCOPE_PERSONAL:
@@ -125,7 +130,6 @@ class SQLiteStorage(Storage):
         with self._connect() as conn:
             conn.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
 
-    # ---------------- Мапперы ----------------
     @staticmethod
     def _row_to_user(row: sqlite3.Row) -> User:
         return User(

@@ -3,7 +3,6 @@ from typing import Callable
 
 import flet as ft
 
-from auth import verify_password
 from models import User
 from storage import Storage
 
@@ -50,10 +49,12 @@ class LoginView(ft.Column):
 
     def login_clicked(self, e):
         login = self.login_field.value.strip()
-        user = self.storage.get_user_by_login(login) if login else None
-        if user is None or not verify_password(
-            self.password_field.value, user.password_hash
-        ):
+        user = (
+            self.storage.authenticate(login, self.password_field.value)
+            if login
+            else None
+        )
+        if user is None:
             self.error_text.value = "Неверный логин или пароль"
             self.error_text.visible = True
             self.update()

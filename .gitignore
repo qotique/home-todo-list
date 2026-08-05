@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+*.sqlite
+*.sqlite3
+
+# Env / secrets
+.env
+
+# Flet build
+build/
+dist/
+
+# IDE
+.idea/
+.vscode/

@@ -6,7 +6,7 @@ from fastapi import Depends, FastAPI, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
-from config import get_config
+from config import Config, get_config
 from models import PRIORITY_LOW, Task, User
 from storage import Storage
 from storage_sqlite import SQLiteStorage
@@ -14,8 +14,21 @@ from storage_sqlite import SQLiteStorage
 app = FastAPI(title="Family Todo API")
 _bearer = HTTPBearer(auto_error=False)
 
+
+def build_storage(config: Config) -> Storage:
+    if config.db_backend == "supabase":
+        from storage_supabase import SupabaseStorage
+
+        return SupabaseStorage(
+            url=config.supabase_url,
+            anon_key=config.supabase_anon_key,
+            service_key=config.supabase_service_key,
+        )
+    return SQLiteStorage(config.db_path)
+
+
 _config = get_config()
-_storage: Storage = SQLiteStorage(_config.db_path)
+_storage: Storage = build_storage(_config)
 
 
 def _user_out(user: User) -> dict:

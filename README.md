@@ -8,72 +8,71 @@
 - Вкладки «Семейные» / «Личные»
 - Приоритеты, дедлайны, назначение ответственного
 - Фильтры (Все / Активные / Завершённые)
-- Хранилище: SQLite, Supabase или собственный API (интерфейс `Storage`)
+- Клиент-сервер: клиенты ходят к REST API, база живёт на сервере (SQLite сейчас)
 
 ## Архитектура
 
-Клиент-сервер: на сервере (VPS) работает REST API, отдельные клиенты
-(web, Android, iOS PWA) общаются с ним по HTTP.
-
 ```
 Браузер (web) ─┐
-Android ───────┼── HTTP ──► FastAPI (server.py) ──► SQLite
+Android ───────┼── HTTP ──► FastAPI (server.py) ──► SQLite (DB_BACKEND)
 iOS (PWA) ─────┘            (session-токены)
 ```
 
-Клиенты используют общий интерфейс `Storage`; реализация `HttpStorage`
-(`storage_http.py`) ходит к API. В офлайн/локальном режиме возможны
-`SQLiteStorage` и `SupabaseStorage` без сервера.
+- **Сервер** (`server.py`) — REST API: логин по токенам, CRUD задач. Выбор базы
+  только здесь, через `DB_BACKEND` (сейчас `sqlite`).
+- **Клиент** (`app.py`) — всегда использует `HttpStorage` и ходит к серверу по
+  `API_URL`. Никакого локального хранилища у клиента нет.
 
 ## Структура проекта
-- `app.py` — точка входа Flet-клиента (выбор реализации по `STORAGE_BACKEND`)
-- `server.py` — REST API (FastAPI): login/logout по токенам, CRUD задач
+- `app.py` — точка входа Flet-клиента (всегда `HttpStorage(API_URL)`)
+- `server.py` — REST API (FastAPI): login/logout по токенам, CRUD задач, выбор БД
 - `models.py` — модели `User`, `Task`
 - `storage.py` — абстрактный интерфейс хранилища (включая сессии/токены)
 - `storage_sqlite.py` — SQLite: данные + сессии
-- `storage_http.py` — HTTP-клиент для `STORAGE_BACKEND=api`
-- `storage_supabase.py` — реализация на Supabase
+- `storage_http.py` — HTTP-клиент (используется приложением)
+- `storage_supabase.py` — Supabase как база сервера (заготовка для `DB_BACKEND=supabase`)
 - `auth.py` — хэширование паролей (pbkdf2)
-- `seed_users.py` — CLI добавления пользователей
+- `seed_users.py` — CLI добавления пользователей (на сервере)
 - `ui/` — Flet-контролы (вход, навигация, список задач, диалог задачи)
 - `supabase/schema.sql` — схема и RLS для Supabase
 - `deploy/api.service`, `deploy/web.service` — юниты systemd для VPS
 - `.github/workflows/build.yml` — сборка Android APK
 
-## Запуск локально (SQLite, без сервера)
+## Переменные окружения (.env)
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env
-python seed_users.py mama Мама --password mypass
-python seed_users.py papa Папа --password mypass
-python app.py
-```
+Сервер (`server.py`, `seed_users.py`):
+- `DB_BACKEND=sqlite` — какая база у сервера (sqlite сейчас)
+- `DB_PATH=family_todo.db`
+- `HOST=0.0.0.0`, `PORT=8000`
+- (опционально при `DB_BACKEND=supabase`) `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `SUPABASE_ANON_KEY`
+
+Клиент (`app.py`):
+- `API_URL=http://127.0.0.1:8000` — адрес API-сервера
 
 ## Запуск клиент-сервер локально
 
 ```bash
-# терминал 1 — API
-STORAGE_BACKEND=sqlite python seed_users.py mama Мама --password mypass
+# терминал 1 — сервер: создаём пользователей и поднимаем API
+python seed_users.py mama Мама --password mypass
 python server.py
 
 # терминал 2 — клиент (web или десктоп)
-STORAGE_BACKEND=api API_URL=http://127.0.0.1:8000 flet run app.py
+API_URL=http://127.0.0.1:8000 flet run app.py
 ```
 
-## Деплой на VPS (клиент-сервер)
+Войти в приложение можно под `mama` / паролем, созданным выше.
+
+## Деплой на VPS
 
 1. Скопируйте код в `/opt/home-todo-list`, установите зависимости в venv.
 
 2. Создайте `/opt/home-todo-list/.env`:
-   - `STORAGE_BACKEND=api`
-   - `API_URL=http://127.0.0.1:8000`
+   - `DB_BACKEND=sqlite`
    - `DB_PATH=/opt/home-todo-list/family_todo.db`
    - `HOST=0.0.0.0`, `PORT=8000`
+   - `API_URL=http://127.0.0.1:8000`
 
-3. Создайте пользователей: `seed_users.py` (выполняется на сервере от владельца БД).
+3. Создайте пользователей на сервере: `seed_users.py` (от владельца БД).
 
 4. Установите службы:
 
@@ -92,17 +91,16 @@ sudo systemctl enable --now family-todo-api family-todo-web
 
 Сборка APK выполняется в GitHub Actions (`.github/workflows/build.yml`).
 Перейдите в **Actions** → «Build Android APK» → **Run workflow**, затем скачайте
-артефакт `home-todo-list-apk`. Нативное приложение использует
-`STORAGE_BACKEND=api` с `API_URL` вашего VPS (через CI-секреты или `.env`).
+артефакт `home-todo-list-apk`. Нативное приложение использует `API_URL` вашего
+VPS (через CI-секреты или `.env`).
 
 ## iOS (PWA)
 
 Откройте web-версию `http://<IP-адрес-VPS>:8550` в Safari на iPhone/iPad и
 выберите «На главный экран» — получите полноэкранное приложение.
 
-## Supabase
+## Supabase как база сервера
 
-Альтернативный режим без собственного сервера: клиенты ходят напрямую в
-Supabase. Выполните `supabase/schema.sql`, создайте пользователей в Auth,
-пропишите `STORAGE_BACKEND=supabase`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`
-(RLS) или `SUPABASE_SERVICE_KEY` (web/VPS).
+Заготовка: при `DB_BACKEND=supabase` сервер хранит данные в Supabase
+(выполните `supabase/schema.sql`, создайте пользователей в Auth). Активный
+вариант сейчас — `sqlite`.

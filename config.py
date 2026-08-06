@@ -16,7 +16,7 @@ def _load_env(path: str) -> None:
 class Config:
     def __init__(self, env_path: str = ".env") -> None:
         _load_env(env_path)
-        self.storage_backend: str = os.getenv("STORAGE_BACKEND", "sqlite")
+        self.db_backend: str = os.getenv("DB_BACKEND", "sqlite")
         self.db_path: str = os.getenv("DB_PATH", "family_todo.db")
         self.api_url: str = os.getenv("API_URL", "http://127.0.0.1:8000")
         self.supabase_url: str = os.getenv("SUPABASE_URL", "")

@@ -77,6 +77,7 @@ class SupabaseStorage(Storage):
     def add_task(self, task: Task) -> Task:
         data = {
             "title": task.title,
+            "description": task.description,
             "scope": task.scope,
             "owner_id": str(task.owner_id),
             "assignee_id": str(task.assignee_id) if task.assignee_id else None,
@@ -91,6 +92,7 @@ class SupabaseStorage(Storage):
     def update_task(self, task: Task) -> None:
         data = {
             "title": task.title,
+            "description": task.description,
             "scope": task.scope,
             "owner_id": str(task.owner_id),
             "assignee_id": str(task.assignee_id) if task.assignee_id else None,
@@ -135,6 +137,7 @@ class SupabaseStorage(Storage):
         return Task(
             id=row["id"],
             title=row["title"],
+            description=row.get("description"),
             scope=row["scope"],
             owner_id=row["owner_id"],
             assignee_id=row.get("assignee_id"),

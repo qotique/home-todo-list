@@ -44,6 +44,25 @@ class TaskItem(ft.Column):
         )
         title = ft.Text(self.task.title, size=16, style=title_style)
 
+        body_controls = [title]
+        if self.task.description:
+            body_controls.append(
+                ft.Text(
+                    self.task.description,
+                    size=13,
+                    color=ft.Colors.GREY_700,
+                    max_lines=2,
+                    overflow=ft.TextOverflow.ELLIPSIS,
+                )
+            )
+        body_controls.append(
+            _make_meta(
+                self.task.priority,
+                self.task.due_date,
+                assignee_name,
+            )
+        )
+
         self.controls = [
             ft.Card(
                 content=ft.Container(
@@ -55,14 +74,7 @@ class TaskItem(ft.Column):
                             ft.Column(
                                 expand=True,
                                 spacing=2,
-                                controls=[
-                                    title,
-                                    _make_meta(
-                                        self.task.priority,
-                                        self.task.due_date,
-                                        assignee_name,
-                                    ),
-                                ],
+                                controls=body_controls,
                             ),
                             ft.IconButton(
                                 icon=ft.Icons.EDIT_OUTLINED,

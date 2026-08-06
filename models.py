@@ -23,6 +23,7 @@ class Task:
     title: str
     scope: str
     owner_id: int
+    description: Optional[str] = None
     assignee_id: Optional[int] = None
     priority: int = PRIORITY_LOW
     due_date: Optional[date] = None

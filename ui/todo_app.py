@@ -14,7 +14,7 @@ class TodoApp(ft.Column):
 
     def init(self):
         self.expand = True
-        self.alignment = ft.MainAxisAlignment.CENTER
+        self.alignment = ft.MainAxisAlignment.START
         self.horizontal_alignment = ft.CrossAxisAlignment.CENTER
         self.current_user: User | None = None
         self._show_login()

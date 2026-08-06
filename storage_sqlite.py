@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS tasks (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     title       TEXT NOT NULL,
+    description TEXT,
     scope       TEXT NOT NULL,
     owner_id    INTEGER NOT NULL REFERENCES users(id),
     assignee_id INTEGER REFERENCES users(id),
@@ -53,6 +54,12 @@ class SQLiteStorage(Storage):
     def _init_schema(self) -> None:
         with self._connect() as conn:
             conn.executescript(_SCHEMA)
+            cols = [
+                r["name"]
+                for r in conn.execute("PRAGMA table_info(tasks)").fetchall()
+            ]
+            if "description" not in cols:
+                conn.execute("ALTER TABLE tasks ADD COLUMN description TEXT")
 
     def get_user_by_login(self, login: str) -> Optional[User]:
         with self._connect() as conn:
@@ -98,10 +105,11 @@ class SQLiteStorage(Storage):
         with self._connect() as conn:
             cur = conn.execute(
                 """INSERT INTO tasks
-                   (title, scope, owner_id, assignee_id, priority, due_date, completed, created_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                   (title, description, scope, owner_id, assignee_id, priority, due_date, completed, created_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     task.title,
+                    task.description,
                     task.scope,
                     task.owner_id,
                     task.assignee_id,
@@ -118,11 +126,12 @@ class SQLiteStorage(Storage):
         with self._connect() as conn:
             conn.execute(
                 """UPDATE tasks SET
-                     title=?, scope=?, owner_id=?, assignee_id=?, priority=?,
+                     title=?, description=?, scope=?, owner_id=?, assignee_id=?, priority=?,
                      due_date=?, completed=?
                    WHERE id=?""",
                 (
                     task.title,
+                    task.description,
                     task.scope,
                     task.owner_id,
                     task.assignee_id,
@@ -179,6 +188,7 @@ class SQLiteStorage(Storage):
         return Task(
             id=row["id"],
             title=row["title"],
+            description=row["description"],
             scope=row["scope"],
             owner_id=row["owner_id"],
             assignee_id=row["assignee_id"],

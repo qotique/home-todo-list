@@ -28,6 +28,13 @@ class TaskDialog(ft.AlertDialog):
         self.name = ft.TextField(
             label="Задача", value=self.task.title, autofocus=True
         )
+        self.description = ft.TextField(
+            label="Описание",
+            value=self.task.description or "",
+            multiline=True,
+            min_lines=2,
+            max_lines=4,
+        )
         self.priority = ft.SegmentedButton(
             allow_empty_selection=False,
             selected=[str(self.task.priority)],
@@ -53,6 +60,7 @@ class TaskDialog(ft.AlertDialog):
 
         fields = [
             self.name,
+            self.description,
             ft.Text("Приоритет", size=13, color=ft.Colors.GREY_700),
             self.priority,
             ft.Text("Срок", size=13, color=ft.Colors.GREY_700),
@@ -110,6 +118,7 @@ class TaskDialog(ft.AlertDialog):
             return
 
         self.task.title = title
+        self.task.description = self.description.value.strip() or None
         if self.priority.selected:
             self.task.priority = int(self.priority.selected[0])
         if self.scope == SCOPE_FAMILY and self.assignee.value is not None:

@@ -117,6 +117,7 @@ class HttpStorage(Storage):
         return Task(
             id=row["id"],
             title=row["title"],
+            description=row.get("description"),
             scope=row["scope"],
             owner_id=row["owner_id"],
             assignee_id=row.get("assignee_id"),
@@ -130,6 +131,7 @@ class HttpStorage(Storage):
     def _task_in(task: Task) -> dict:
         return {
             "title": task.title,
+            "description": task.description,
             "scope": task.scope,
             "assignee_id": task.assignee_id,
             "priority": task.priority,

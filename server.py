@@ -39,6 +39,7 @@ def _task_out(task: Task) -> dict:
     return {
         "id": task.id,
         "title": task.title,
+        "description": task.description,
         "scope": task.scope,
         "owner_id": task.owner_id,
         "assignee_id": task.assignee_id,
@@ -77,6 +78,7 @@ class LoginOut(BaseModel):
 
 class TaskIn(BaseModel):
     title: str
+    description: Optional[str] = None
     scope: str
     assignee_id: Optional[int] = None
     priority: int = PRIORITY_LOW
@@ -122,6 +124,7 @@ def add_task(body: TaskIn, user: User = Depends(current_user)) -> dict:
         raise HTTPException(status_code=400, detail="Неверная область видимости")
     task = Task(
         title=body.title,
+        description=body.description,
         scope=body.scope,
         owner_id=user.id,
         assignee_id=body.assignee_id,
@@ -141,6 +144,7 @@ def update_task(
         raise HTTPException(status_code=404, detail="Задача не найдена")
     check_task_access(task, user)
     task.title = body.title
+    task.description = body.description
     task.scope = body.scope
     task.assignee_id = body.assignee_id
     task.priority = body.priority

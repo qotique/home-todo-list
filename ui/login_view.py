@@ -16,16 +16,15 @@ class LoginView(ft.Column):
     )
 
     def init(self):
-        self.width = 380
         self.expand = True
-        self.alignment = ft.MainAxisAlignment.CENTER
-        self.horizontal_alignment = ft.CrossAxisAlignment.CENTER
+        self.spacing = 0
 
         self.login_field = ft.TextField(
-            label="Логин", autofocus=True, on_submit=self.login_clicked
+            label="Логин", width=380, autofocus=True, on_submit=self.login_clicked
         )
         self.password_field = ft.TextField(
             label="Пароль",
+            width=380,
             password=True,
             can_reveal_password=True,
             on_submit=self.login_clicked,
@@ -34,20 +33,32 @@ class LoginView(ft.Column):
             value="", visible=False, color=ft.Colors.RED, size=13
         )
 
+        form = ft.Column(
+            width=380,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            controls=[
+                ft.Icon(ft.Icons.CHECKLIST, size=56, color=ft.Colors.PRIMARY),
+                ft.Text(
+                    "Семейный Todo-лист",
+                    style=ft.TextStyle(size=22, weight=ft.FontWeight.BOLD),
+                ),
+                self.login_field,
+                self.password_field,
+                ft.FilledButton(
+                    content=ft.Text("Войти"),
+                    width=380,
+                    on_click=self.login_clicked,
+                ),
+                self.error_text,
+            ],
+        )
+
         self.controls = [
-            ft.Icon(ft.Icons.CHECKLIST, size=56, color=ft.Colors.PRIMARY),
-            ft.Text(
-                "Семейный Todo-лист",
-                style=ft.TextStyle(size=22, weight=ft.FontWeight.BOLD),
-            ),
-            self.login_field,
-            self.password_field,
-            ft.FilledButton(
-                content=ft.Text("Войти"),
-                width=380,
-                on_click=self.login_clicked,
-            ),
-            self.error_text,
+            ft.Container(
+                expand=True,
+                alignment=ft.Alignment.CENTER,
+                content=form,
+            )
         ]
 
     def login_clicked(self, e):

@@ -24,6 +24,10 @@ org = "com.qotique"
 bundle_id = "com.qotique.home_todo_list"
 target_arch = ["arm64-v8a", "armeabi-v7a", "x86_64"]
 
+[tool.flet.android.manifest_application]
+usesCleartextTraffic = "true"
+allowBackup = "false"
+
 [tool.flet.cleanup]
 app = true
 packages = true

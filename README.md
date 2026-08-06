@@ -107,6 +107,13 @@ sudo systemctl enable --now family-todo-api family-todo-web
    `http://127.0.0.1:8000` (не подойдёт для реального телефона).
 3. При смене IP перезапустите workflow — пересоберётся APK с новым адресом.
 
+Для HTTP-адреса манифест уже включает `usesCleartextTraffic="true"`
+(`[tool.flet.android.manifest_application]`), чтобы Android разрешал
+незашифрованные запросы к вашему серверу. Пароли при этом идут без шифрования.
+
+Также вам понадобится: API должен быть доступен снаружи (`ufw allow 8000`)
+и пользователи созданы на сервере (`seed_users.py`).
+
 ## iOS (PWA)
 
 Откройте web-версию `http://<IP-адрес-VPS>:8550` в Safari на iPhone/iPad и

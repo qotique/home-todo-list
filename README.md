@@ -25,6 +25,7 @@ iOS (PWA) ─────┘            (session-токены)
 
 ## Структура проекта
 - `app.py` — точка входа Flet-клиента (всегда `HttpStorage(API_URL)`)
+- `app_config.json` — адрес API (`api_url`), упаковывается в приложение
 - `server.py` — REST API (FastAPI): login/logout по токенам, CRUD задач, выбор БД
 - `models.py` — модели `User`, `Task`
 - `storage.py` — абстрактный интерфейс хранилища (включая сессии/токены)
@@ -47,7 +48,9 @@ iOS (PWA) ─────┘            (session-токены)
 - (опционально при `DB_BACKEND=supabase`) `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `SUPABASE_ANON_KEY`
 
 Клиент (`app.py`):
-- `API_URL=http://127.0.0.1:8000` — адрес API-сервера
+- Адрес API берётся из `app_config.json` (поле `api_url`), затем из
+  `API_URL` в `.env`, затем дефолт `http://127.0.0.1:8000`.
+  Для локального запуска: `API_URL=http://127.0.0.1:8000`
 
 ## Запуск клиент-сервер локально
 
@@ -91,8 +94,18 @@ sudo systemctl enable --now family-todo-api family-todo-web
 
 Сборка APK выполняется в GitHub Actions (`.github/workflows/build.yml`).
 Перейдите в **Actions** → «Build Android APK» → **Run workflow**, затем скачайте
-артефакт `home-todo-list-apk`. Нативное приложение использует `API_URL` вашего
-VPS (через CI-секреты или `.env`).
+артефакт `home-todo-list-apk`.
+
+Нативное приложение запускает Python на самом устройстве, поэтому адрес сервера
+должен быть вшит внутрь APK при сборке:
+
+1. В настройках репозитория **Settings → Secrets and variables → Actions**
+   добавьте секрет `API_URL` со значением `http://<IP-адрес-VPS>:8000`
+   (публичный адрес, доступный с телефона).
+2. При сборке workflow записывает этот адрес в `app_config.json`, который
+   упаковывается в APK. Если секрет не задан, останется дефолт
+   `http://127.0.0.1:8000` (не подойдёт для реального телефона).
+3. При смене IP перезапустите workflow — пересоберётся APK с новым адресом.
 
 ## iOS (PWA)
 

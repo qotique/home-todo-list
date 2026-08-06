@@ -11,6 +11,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Inject API URL
+        env:
+          API_URL: ${{ secrets.API_URL }}
+        run: |
+          python - <<'EOF'
+          import json, os
+          url = os.environ.get("API_URL", "").strip()
+          if url:
+              with open("app_config.json", "w", encoding="utf-8") as f:
+                  json.dump({"api_url": url}, f)
+              print("API_URL injected:", url)
+          else:
+              print("Secret API_URL not set, keeping default in app_config.json")
+          EOF
+
       - name: Build APK
         id: build
         uses: flet-dev/flet-build-action@v1

@@ -8,22 +8,39 @@
 - Вкладки «Семейные» / «Личные»
 - Приоритеты, дедлайны, назначение ответственного
 - Фильтры (Все / Активные / Завершённые)
-- Хранилище: SQLite или Supabase (интерфейс `Storage`)
+- Хранилище: SQLite, Supabase или собственный API (интерфейс `Storage`)
+
+## Архитектура
+
+Клиент-сервер: на сервере (VPS) работает REST API, отдельные клиенты
+(web, Android, iOS PWA) общаются с ним по HTTP.
+
+```
+Браузер (web) ─┐
+Android ───────┼── HTTP ──► FastAPI (server.py) ──► SQLite
+iOS (PWA) ─────┘            (session-токены)
+```
+
+Клиенты используют общий интерфейс `Storage`; реализация `HttpStorage`
+(`storage_http.py`) ходит к API. В офлайн/локальном режиме возможны
+`SQLiteStorage` и `SupabaseStorage` без сервера.
 
 ## Структура проекта
-- `app.py` — точка входа приложения
+- `app.py` — точка входа Flet-клиента (выбор реализации по `STORAGE_BACKEND`)
+- `server.py` — REST API (FastAPI): login/logout по токенам, CRUD задач
 - `models.py` — модели `User`, `Task`
-- `storage.py` — абстрактный интерфейс хранилища
-- `storage_sqlite.py` — реализация на SQLite
+- `storage.py` — абстрактный интерфейс хранилища (включая сессии/токены)
+- `storage_sqlite.py` — SQLite: данные + сессии
+- `storage_http.py` — HTTP-клиент для `STORAGE_BACKEND=api`
 - `storage_supabase.py` — реализация на Supabase
 - `auth.py` — хэширование паролей (pbkdf2)
 - `seed_users.py` — CLI добавления пользователей
 - `ui/` — Flet-контролы (вход, навигация, список задач, диалог задачи)
 - `supabase/schema.sql` — схема и RLS для Supabase
-- `deploy/flet.service` — юнит systemd для VPS
+- `deploy/api.service`, `deploy/web.service` — юниты systemd для VPS
 - `.github/workflows/build.yml` — сборка Android APK
 
-## Запуск локально (SQLite)
+## Запуск локально (SQLite, без сервера)
 
 ```bash
 python3 -m venv .venv
@@ -35,62 +52,57 @@ python seed_users.py papa Папа --password mypass
 python app.py
 ```
 
-После этого откройте `http://localhost:8000` или десктопное окно и войдите одним из созданных пользователей.
-
-## Запуск как web-сервер на VPS
-
-1. Скопируйте код в `/opt/home-todo-list`, создайте venv и установите зависимости:
+## Запуск клиент-сервер локально
 
 ```bash
-sudo mkdir -p /opt/home-todo-list
-sudo git clone git@github.com:qotique/home-todo-list.git /opt/home-todo-list
-cd /opt/home-todo-list
-sudo python3 -m venv .venv
-sudo .venv/bin/pip install -r requirements.txt
+# терминал 1 — API
+STORAGE_BACKEND=sqlite python seed_users.py mama Мама --password mypass
+python server.py
+
+# терминал 2 — клиент (web или десктоп)
+STORAGE_BACKEND=api API_URL=http://127.0.0.1:8000 flet run app.py
 ```
 
-2. Создайте `.env` (указывайте `STORAGE_BACKEND=sqlite` или `supabase`).
+## Деплой на VPS (клиент-сервер)
 
-3. Создайте пользователей: `seed_users.py` (см. выше, выполнять от владельца БД).
+1. Скопируйте код в `/opt/home-todo-list`, установите зависимости в venv.
 
-4. Установите службу:
+2. Создайте `/opt/home-todo-list/.env`:
+   - `STORAGE_BACKEND=api`
+   - `API_URL=http://127.0.0.1:8000`
+   - `DB_PATH=/opt/home-todo-list/family_todo.db`
+   - `HOST=0.0.0.0`, `PORT=8000`
+
+3. Создайте пользователей: `seed_users.py` (выполняется на сервере от владельца БД).
+
+4. Установите службы:
 
 ```bash
-sudo cp deploy/flet.service /etc/systemd/system/flet.service
+sudo cp deploy/api.service /etc/systemd/system/family-todo-api.service
+sudo cp deploy/web.service /etc/systemd/system/family-todo-web.service
 sudo systemctl daemon-reload
-sudo systemctl enable --now flet
+sudo systemctl enable --now family-todo-api family-todo-web
 ```
 
-Сервис слушает порт `8000`. Убедитесь, что он открыт в фаерволе и доступен по белому IP:
-`http://<IP-адрес-VPS>:8000`. Логи службы: `journalctl -u flet -f`.
+- API: порт `8000` (`/api/login`, `/api/tasks`, ...).
+- Web-клиент: порт `8550`.
+Логи: `journalctl -u family-todo-api -f`, `journalctl -u family-todo-web -f`.
 
 ## Android
 
-Сборка APK выполняется в GitHub Actions (`.github/workflows/build.yml`) на ветке `main`.
-Перейдите в раздел **Actions** → «Build Android APK» → **Run workflow**, затем скачайте артефакт
-`home-todo-list-apk` (файл `flet-apk.zip`, внутри APK/AAB).
-
-Нативное приложение использует Supabase в облаке: в `.env` указаны `SUPABASE_URL` и
-`SUPABASE_ANON_KEY` (RLS). Перед сборкой запишите их в CI-секреты GitHub
-(Settings → Secrets) или внесите значения в `.env` в момент сборки.
+Сборка APK выполняется в GitHub Actions (`.github/workflows/build.yml`).
+Перейдите в **Actions** → «Build Android APK» → **Run workflow**, затем скачайте
+артефакт `home-todo-list-apk`. Нативное приложение использует
+`STORAGE_BACKEND=api` с `API_URL` вашего VPS (через CI-секреты или `.env`).
 
 ## iOS (PWA)
 
-Native IPA не собирается (нет Apple Developer аккаунта). Вместо этого откройте web-версию
-`http://<IP-адрес-VPS>:8000` в Safari на iPhone/iPad и выберите «На главный экран» —
-получите полноэкранное приложение.
+Откройте web-версию `http://<IP-адрес-VPS>:8550` в Safari на iPhone/iPad и
+выберите «На главный экран» — получите полноэкранное приложение.
 
 ## Supabase
 
-1. Создайте проект в Supabase.
-2. В SQL Editor выполните содержимое `supabase/schema.sql`.
-3. В Authentication → Users создайте пользователей с e-mail и паролем.
-4. В `.env` пропишите:
-   - `STORAGE_BACKEND=supabase`
-   - `SUPABASE_URL=https://<ref>.supabase.co`
-   - `SUPABASE_SERVICE_KEY=<service_role>>` (для web/VPS)
-   - `SUPABASE_ANON_KEY=<anon>>` (для нативного приложения)
-
-Web-версия на VPS при `STORAGE_BACKEND=supabase` входит через Supabase Auth (email+пароль),
-RLS пропускается сервисным ключом. Нативное Android-приложение использует anon-ключ + RLS
-(`supabase/schema.sql`): пользователь видит свои и семейные задачи.
+Альтернативный режим без собственного сервера: клиенты ходят напрямую в
+Supabase. Выполните `supabase/schema.sql`, создайте пользователей в Auth,
+пропишите `STORAGE_BACKEND=supabase`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`
+(RLS) или `SUPABASE_SERVICE_KEY` (web/VPS).

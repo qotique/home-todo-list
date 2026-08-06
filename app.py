@@ -8,6 +8,10 @@ from ui.todo_app import TodoApp
 
 def build_storage() -> Storage:
     config = get_config()
+    if config.storage_backend == "api":
+        from storage_http import HttpStorage
+
+        return HttpStorage(config.api_url)
     if config.storage_backend == "supabase":
         from storage_supabase import SupabaseStorage
 

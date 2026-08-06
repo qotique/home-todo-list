@@ -18,6 +18,7 @@ class Config:
         _load_env(env_path)
         self.storage_backend: str = os.getenv("STORAGE_BACKEND", "sqlite")
         self.db_path: str = os.getenv("DB_PATH", "family_todo.db")
+        self.api_url: str = os.getenv("API_URL", "http://127.0.0.1:8000")
         self.supabase_url: str = os.getenv("SUPABASE_URL", "")
         self.supabase_service_key: str = os.getenv("SUPABASE_SERVICE_KEY", "")
         self.supabase_anon_key: str = os.getenv("SUPABASE_ANON_KEY", "")

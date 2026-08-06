@@ -1,3 +1,4 @@
+import secrets
 import sqlite3
 from datetime import date, datetime
 from typing import List, Optional
@@ -24,6 +25,12 @@ CREATE TABLE IF NOT EXISTS tasks (
     due_date    TEXT,
     completed   INTEGER NOT NULL DEFAULT 0,
     created_at  TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS sessions (
+    token      TEXT PRIMARY KEY,
+    user_id    INTEGER NOT NULL REFERENCES users(id),
+    created_at TEXT NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_tasks_scope ON tasks(scope);
@@ -129,6 +136,34 @@ class SQLiteStorage(Storage):
     def delete_task(self, task_id: int) -> None:
         with self._connect() as conn:
             conn.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
+
+    def get_task(self, task_id: int) -> Optional[Task]:
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT * FROM tasks WHERE id = ?", (task_id,)
+            ).fetchone()
+        return self._row_to_task(row) if row else None
+
+    def create_token(self, user_id: int) -> str:
+        token = secrets.token_urlsafe(32)
+        with self._connect() as conn:
+            conn.execute(
+                "INSERT INTO sessions (token, user_id, created_at) VALUES (?, ?, ?)",
+                (token, user_id, datetime.now().isoformat()),
+            )
+        return token
+
+    def get_user_by_token(self, token: str) -> Optional[User]:
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT u.* FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token = ?",
+                (token,),
+            ).fetchone()
+        return self._row_to_user(row) if row else None
+
+    def delete_token(self, token: str) -> None:
+        with self._connect() as conn:
+            conn.execute("DELETE FROM sessions WHERE token = ?", (token,))
 
     @staticmethod
     def _row_to_user(row: sqlite3.Row) -> User:

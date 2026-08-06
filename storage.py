@@ -36,3 +36,19 @@ class Storage(ABC):
     @abstractmethod
     def delete_task(self, task_id: int) -> None:
         ...
+
+    @abstractmethod
+    def get_task(self, task_id: int) -> Optional[Task]:
+        ...
+
+    @abstractmethod
+    def create_token(self, user_id: int) -> str:
+        ...
+
+    @abstractmethod
+    def get_user_by_token(self, token: str) -> Optional[User]:
+        ...
+
+    @abstractmethod
+    def delete_token(self, token: str) -> None:
+        ...

@@ -1,5 +1,5 @@
 [Unit]
-Description=Family Todo List (Flet web)
+Description=Family Todo API
 After=network.target
 
 [Service]
@@ -8,7 +8,7 @@ User=www-data
 WorkingDirectory=/opt/home-todo-list
 Environment=PYTHONUNBUFFERED=1
 EnvironmentFile=/opt/home-todo-list/.env
-ExecStart=/opt/home-todo-list/.venv/bin/flet run app.py --web --host 0.0.0.0 --port 8000
+ExecStart=/opt/home-todo-list/.venv/bin/uvicorn server:app --host 0.0.0.0 --port 8000
 Restart=always
 RestartSec=5
 

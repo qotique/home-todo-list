@@ -2,9 +2,10 @@ from datetime import date, datetime
 from typing import List, Optional
 
 from models import SCOPE_PERSONAL, Task, User
+from storage import Storage
 
 
-class SupabaseStorage:
+class SupabaseStorage(Storage):
     def __init__(self, url: str, anon_key: str, service_key: str = ""):
         self._url = url
         self._anon_key = anon_key
@@ -101,6 +102,18 @@ class SupabaseStorage:
 
     def delete_task(self, task_id: int) -> None:
         self._table("tasks").delete().eq("id", task_id).execute()
+
+    def get_task(self, task_id: int):
+        raise NotImplementedError
+
+    def create_token(self, user_id: int) -> str:
+        raise NotImplementedError
+
+    def get_user_by_token(self, token: str):
+        raise NotImplementedError
+
+    def delete_token(self, token: str) -> None:
+        raise NotImplementedError
 
     @staticmethod
     def _row_to_user(row: dict) -> User:

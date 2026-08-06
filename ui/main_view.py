@@ -3,6 +3,7 @@ from datetime import date
 from typing import Callable
 
 import flet as ft
+from flet.controls.base_control import skip_field
 
 from models import SCOPE_FAMILY, SCOPE_PERSONAL, Task, User
 from storage import Storage
@@ -15,9 +16,11 @@ _FILTERS = ["all", "active", "completed"]
 
 @ft.control
 class MainView(ft.Column):
-    storage: Storage = None
-    user: User = None
-    on_logout: Callable[[], None] = field(default=lambda: None)
+    storage: Storage = skip_field()
+    user: User = skip_field()
+    on_logout: Callable[[], None] = field(
+        default=lambda: None, metadata={"skip": True}
+    )
 
     def init(self):
         self.scope = SCOPE_FAMILY

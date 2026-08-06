@@ -1,7 +1,5 @@
-from dataclasses import field
-from typing import Callable
-
 import flet as ft
+from flet.controls.base_control import skip_field
 
 from models import User
 from storage import Storage
@@ -12,7 +10,7 @@ from .main_view import MainView
 
 @ft.control
 class TodoApp(ft.Column):
-    storage: Storage = None
+    storage: Storage = skip_field()
 
     def init(self):
         self.expand = True

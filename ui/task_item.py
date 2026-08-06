@@ -2,6 +2,7 @@ from dataclasses import field
 from typing import Callable
 
 import flet as ft
+from flet.controls.base_control import skip_field
 
 from models import SCOPE_FAMILY, Task, User
 from storage import Storage
@@ -12,11 +13,13 @@ from .task_dialog import TaskDialog
 
 @ft.control
 class TaskItem(ft.Column):
-    task: Task = None
-    storage: Storage = None
+    task: Task = skip_field()
+    storage: Storage = skip_field()
     scope: str = ""
-    users: list[User] = field(default_factory=list)
-    on_changed: Callable[[], None] = field(default=lambda: None)
+    users: list[User] = field(default_factory=list, metadata={"skip": True})
+    on_changed: Callable[[], None] = field(
+        default=lambda: None, metadata={"skip": True}
+    )
 
     def init(self):
         self.spacing = 0

@@ -2,6 +2,7 @@ from dataclasses import field
 from typing import Callable
 
 import flet as ft
+from flet.controls.base_control import skip_field
 
 from models import User
 from storage import Storage
@@ -9,8 +10,10 @@ from storage import Storage
 
 @ft.control
 class LoginView(ft.Column):
-    storage: Storage = None
-    on_login: Callable[[User], None] = field(default=lambda user: None)
+    storage: Storage = skip_field()
+    on_login: Callable[[User], None] = field(
+        default=lambda user: None, metadata={"skip": True}
+    )
 
     def init(self):
         self.width = 380

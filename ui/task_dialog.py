@@ -3,6 +3,7 @@ from datetime import date, datetime, timedelta
 from typing import Callable
 
 import flet as ft
+from flet.controls.base_control import skip_field
 
 from models import PRIORITY_HIGH, PRIORITY_LOW, PRIORITY_MEDIUM, SCOPE_FAMILY, Task, User
 from storage import Storage
@@ -12,12 +13,14 @@ from .formatters import format_date
 
 @ft.control
 class TaskDialog(ft.AlertDialog):
-    task: Task = None
-    storage: Storage = None
+    task: Task = skip_field()
+    storage: Storage = skip_field()
     scope: str = ""
-    users: list[User] = field(default_factory=list)
+    users: list[User] = field(default_factory=list, metadata={"skip": True})
     title_text: str = "Задача"
-    on_saved: Callable[[], None] = field(default=lambda: None)
+    on_saved: Callable[[], None] = field(
+        default=lambda: None, metadata={"skip": True}
+    )
 
     def init(self):
         self.title = ft.Text(self.title_text)

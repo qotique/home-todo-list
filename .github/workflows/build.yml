@@ -26,7 +26,14 @@ jobs:
               print("Secret API_URL not set, keeping default in app_config.json")
           EOF
 
+      - name: Set up uv
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          python-version: "3.13"
+
       - name: Preinstall flet-cli tool
+        env:
+          UV_PYTHON: "3.13"
         run: |
           uv sync
           uv pip install --python .venv/bin/python "flet-cli==0.86.1"

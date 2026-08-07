@@ -7,14 +7,120 @@
 - Логин с паролем
 - Вкладки «Семейные» / «Личные»
 - Приоритеты, дедлайны, назначение ответственного
-- Фильтры (all / active / completed)
-- Хранилище: SQLite или Supabase (интерфейс `Storage`)
+- Фильтры (Все / Активные / Завершённые)
+- Клиент-сервер: клиенты ходят к REST API, база живёт на сервере (SQLite сейчас)
+
+## Архитектура
+
+```
+Браузер (web) ─┐
+Android ───────┼── HTTP ──► FastAPI (server.py) ──► SQLite (DB_BACKEND)
+iOS (PWA) ─────┘            (session-токены)
+```
+
+- **Сервер** (`server.py`) — REST API: логин по токенам, CRUD задач. Выбор базы
+  только здесь, через `DB_BACKEND` (сейчас `sqlite`).
+- **Клиент** (`app.py`) — всегда использует `HttpStorage` и ходит к серверу по
+  `API_URL`. Никакого локального хранилища у клиента нет.
 
 ## Структура проекта
-- `app.py` — точка входа приложения
+- `app.py` — точка входа Flet-клиента (всегда `HttpStorage(API_URL)`)
+- `app_config.json` — адрес API (`api_url`), упаковывается в приложение
+- `server.py` — REST API (FastAPI): login/logout по токенам, CRUD задач, выбор БД
 - `models.py` — модели `User`, `Task`
-- `storage.py` — абстрактный интерфейс хранилища
-- `storage_sqlite.py` — реализация на SQLite
-- `storage_supabase.py` — реализация на Supabase
-- `ui/` — Flet-контролы (вход, навигация, список задач)
-- `.github/workflows/` — GitHub Actions (сборка Android APK)
+- `storage.py` — абстрактный интерфейс хранилища (включая сессии/токены)
+- `storage_sqlite.py` — SQLite: данные + сессии
+- `storage_http.py` — HTTP-клиент (используется приложением)
+- `storage_supabase.py` — Supabase как база сервера (заготовка для `DB_BACKEND=supabase`)
+- `auth.py` — хэширование паролей (pbkdf2)
+- `seed_users.py` — CLI добавления пользователей (на сервере)
+- `ui/` — Flet-контролы (вход, навигация, список задач, диалог задачи)
+- `supabase/schema.sql` — схема и RLS для Supabase
+- `deploy/api.service`, `deploy/web.service` — юниты systemd для VPS
+- `.github/workflows/build.yml` — сборка Android APK
+
+## Переменные окружения (.env)
+
+Сервер (`server.py`, `seed_users.py`):
+- `DB_BACKEND=sqlite` — какая база у сервера (sqlite сейчас)
+- `DB_PATH=family_todo.db`
+- `HOST=0.0.0.0`, `PORT=8000`
+- (опционально при `DB_BACKEND=supabase`) `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `SUPABASE_ANON_KEY`
+
+Клиент (`app.py`):
+- Адрес API берётся из `app_config.json` (поле `api_url`), затем из
+  `API_URL` в `.env`, затем дефолт `http://127.0.0.1:8000`.
+  Для локального запуска: `API_URL=http://127.0.0.1:8000`
+
+## Запуск клиент-сервер локально
+
+```bash
+# терминал 1 — сервер: создаём пользователей и поднимаем API
+python seed_users.py mama Мама --password mypass
+python server.py
+
+# терминал 2 — клиент (web или десктоп)
+API_URL=http://127.0.0.1:8000 flet run app.py
+```
+
+Войти в приложение можно под `mama` / паролем, созданным выше.
+
+## Деплой на VPS
+
+1. Скопируйте код в `/opt/home-todo-list`, установите зависимости в venv.
+
+2. Создайте `/opt/home-todo-list/.env`:
+   - `DB_BACKEND=sqlite`
+   - `DB_PATH=/opt/home-todo-list/family_todo.db`
+   - `HOST=0.0.0.0`, `PORT=8000`
+   - `API_URL=http://127.0.0.1:8000`
+
+3. Создайте пользователей на сервере: `seed_users.py` (от владельца БД).
+
+4. Установите службы:
+
+```bash
+sudo cp deploy/api.service /etc/systemd/system/family-todo-api.service
+sudo cp deploy/web.service /etc/systemd/system/family-todo-web.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now family-todo-api family-todo-web
+```
+
+- API: порт `8000` (`/api/login`, `/api/tasks`, ...).
+- Web-клиент: порт `8550`.
+Логи: `journalctl -u family-todo-api -f`, `journalctl -u family-todo-web -f`.
+
+## Android
+
+Сборка APK выполняется в GitHub Actions (`.github/workflows/build.yml`).
+Перейдите в **Actions** → «Build Android APK» → **Run workflow**, затем скачайте
+артефакт `home-todo-list-apk`.
+
+Нативное приложение запускает Python на самом устройстве, поэтому адрес сервера
+должен быть вшит внутрь APK при сборке:
+
+1. В настройках репозитория **Settings → Secrets and variables → Actions**
+   добавьте секрет `API_URL` со значением `http://<IP-адрес-VPS>:8000`
+   (публичный адрес, доступный с телефона).
+2. При сборке workflow записывает этот адрес в `app_config.json`, который
+   упаковывается в APK. Если секрет не задан, останется дефолт
+   `http://127.0.0.1:8000` (не подойдёт для реального телефона).
+3. При смене IP перезапустите workflow — пересоберётся APK с новым адресом.
+
+Для HTTP-адреса манифест уже включает `usesCleartextTraffic="true"`
+(`[tool.flet.android.manifest_application]`), чтобы Android разрешал
+незашифрованные запросы к вашему серверу. Пароли при этом идут без шифрования.
+
+Также вам понадобится: API должен быть доступен снаружи (`ufw allow 8000`)
+и пользователи созданы на сервере (`seed_users.py`).
+
+## iOS (PWA)
+
+Откройте web-версию `http://<IP-адрес-VPS>:8550` в Safari на iPhone/iPad и
+выберите «На главный экран» — получите полноэкранное приложение.
+
+## Supabase как база сервера
+
+Заготовка: при `DB_BACKEND=supabase` сервер хранит данные в Supabase
+(выполните `supabase/schema.sql`, создайте пользователей в Auth). Активный
+вариант сейчас — `sqlite`.

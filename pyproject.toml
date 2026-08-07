@@ -1,0 +1,33 @@
+[project]
+name = "home_todo_list"
+version = "1.0.0"
+description = "Семейный Todo-лист"
+requires-python = ">=3.13,<3.15"
+dependencies = [
+    "flet>=0.86.1",
+    "httpx>=0.27.0",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+    "supabase>=2.0.0",
+]
+
+[tool.flet]
+product = "Семейный Todo-лист"
+
+[tool.flet.app]
+path = "."
+module = "app"
+exclude = [".git", ".env", "family_todo.db", "build", ".venv", "__pycache__"]
+
+[tool.flet.android]
+org = "com.qotique"
+bundle_id = "com.qotique.home_todo_list"
+target_arch = ["arm64-v8a", "armeabi-v7a", "x86_64"]
+
+[tool.flet.android.manifest_application]
+usesCleartextTraffic = "true"
+allowBackup = "false"
+
+[tool.flet.cleanup]
+app = true
+packages = true

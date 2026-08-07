@@ -1,0 +1,44 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Inject API URL
+        env:
+          API_URL: ${{ secrets.API_URL }}
+        run: |
+          python - <<'EOF'
+          import json, os
+          url = os.environ.get("API_URL", "").strip()
+          if url:
+              with open("app_config.json", "w", encoding="utf-8") as f:
+                  json.dump({"api_url": url}, f)
+              print("API_URL injected:", url)
+          else:
+              print("Secret API_URL not set, keeping default in app_config.json")
+          EOF
+
+      - name: Build APK
+        id: build
+        uses: flet-dev/flet-build-action@v1
+        with:
+          target: apk
+          runner-python-version: "3.13"
+          bundled-python-version: "3.13"
+          build-number: ${{ github.run_number }}
+          build-version: "1.0.0"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: home-todo-list-apk
+          path: ${{ steps.build.outputs.archive-path }}
+          if-no-files-found: error

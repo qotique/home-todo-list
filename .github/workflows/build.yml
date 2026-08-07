@@ -26,6 +26,11 @@ jobs:
               print("Secret API_URL not set, keeping default in app_config.json")
           EOF
 
+      - name: Preinstall flet-cli tool
+        run: |
+          uv sync
+          uv pip install --python .venv/bin/python "flet-cli==0.86.1"
+
       - name: Build APK
         id: build
         uses: flet-dev/flet-build-action@v1

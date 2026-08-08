@@ -38,6 +38,8 @@ class Config:
             or os.getenv("API_URL")
             or "http://127.0.0.1:8000"
         )
+        if not self.api_url.startswith(("http://", "https://")):
+            self.api_url = "http://" + self.api_url
         self.supabase_url: str = os.getenv("SUPABASE_URL", "")
         self.supabase_service_key: str = os.getenv("SUPABASE_SERVICE_KEY", "")
         self.supabase_anon_key: str = os.getenv("SUPABASE_ANON_KEY", "")

@@ -13,6 +13,10 @@ class HttpStorage(Storage):
         self._timeout = timeout
         self._token: Optional[str] = None
 
+    @property
+    def api_url(self) -> str:
+        return self._api_url
+
     def _headers(self) -> dict:
         if self._token:
             return {"Authorization": f"Bearer {self._token}"}

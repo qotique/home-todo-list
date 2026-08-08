@@ -2,6 +2,7 @@ from dataclasses import field
 from typing import Callable
 
 import flet as ft
+import httpx
 from flet.controls.base_control import skip_field
 
 from models import User
@@ -63,11 +64,18 @@ class LoginView(ft.Column):
 
     def login_clicked(self, e):
         login = self.login_field.value.strip()
-        user = (
-            self.storage.authenticate(login, self.password_field.value)
-            if login
-            else None
-        )
+        try:
+            user = (
+                self.storage.authenticate(login, self.password_field.value)
+                if login
+                else None
+            )
+        except httpx.HTTPError:
+            url = getattr(self.storage, "api_url", "")
+            self.error_text.value = f"Не удалось подключиться к {url}"
+            self.error_text.visible = True
+            self.update()
+            return
         if user is None:
             self.error_text.value = "Неверный логин или пароль"
             self.error_text.visible = True

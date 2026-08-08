@@ -18,12 +18,15 @@ jobs:
           python - <<'EOF'
           import json, os
           url = os.environ.get("API_URL", "").strip()
-          if url:
-              with open("app_config.json", "w", encoding="utf-8") as f:
-                  json.dump({"api_url": url}, f)
-              print("API_URL injected:", url)
-          else:
-              print("Secret API_URL not set, keeping default in app_config.json")
+          with open("app_config.json", "w", encoding="utf-8") as f:
+              json.dump({"api_url": url}, f)
+          print("app_config.json:", open("app_config.json", encoding="utf-8").read().strip())
+          if not url:
+              raise SystemExit(
+                  "ERROR: repository secret API_URL is empty. "
+                  "Go to Settings -> Secrets and variables -> Actions and add "
+                  "API_URL=http://<SERVER_IP>:8000"
+              )
           EOF
 
       - name: Set up uv

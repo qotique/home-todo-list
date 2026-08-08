@@ -1,6 +1,8 @@
 import json
 import os
 
+_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 
 def _load_env(path: str) -> None:
     if not os.path.exists(path):
@@ -15,6 +17,8 @@ def _load_env(path: str) -> None:
 
 
 def _load_config_json(path: str) -> dict:
+    if not os.path.isabs(path):
+        path = os.path.join(_BASE_DIR, path)
     if not os.path.exists(path):
         return {}
     try:
